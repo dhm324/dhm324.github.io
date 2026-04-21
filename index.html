@@ -1,10 +1,367 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>My Free Website</title>
-  </head>
-  <body>
-    <h1>Hello, World!</h1>
-    <p>This is my first website hosted on GitHub Pages.</p>
-  </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Diagnosis</title>
+    <style>
+        :root {
+            --primary: #d32f2f; /* Lifesaving Red */
+            --bg-color: #f4f4f9;
+            --card-bg: #ffffff;
+            --text-dark: #333333;
+            --text-light: #777777;
+            --wrong: #e57373;
+            --correct: #4caf50;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 500px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        header h1 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .hint-box {
+            background-color: var(--card-bg);
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 16px;
+            line-height: 1.4;
+            display: none; /* Hidden by default */
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .hint-box.visible {
+            display: block;
+        }
+
+        .hint-number {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--primary);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #b71c1c;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .previous-guesses {
+            margin-top: 20px;
+        }
+
+        .guess-tag {
+            display: inline-block;
+            background-color: var(--wrong);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+            margin: 0 5px 5px 0;
+            text-decoration: line-through;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .modal h2 {
+            margin-top: 0;
+        }
+
+        .win-text { color: var(--correct); }
+        .lose-text { color: var(--primary); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Daily Diagnosis</h1>
+        <p id="date-display">Loading date...</p>
+    </header>
+
+    <div class="game-container">
+        <div id="hints-container">
+            </div>
+
+        <div class="previous-guesses" id="guesses-container">
+            </div>
+
+        <div class="input-section">
+            <input type="text" id="guess-input" placeholder="Enter condition (e.g. Asthma)" autocomplete="off">
+            <button id="guess-btn" onclick="submitGuess()">Guess</button>
+        </div>
+    </div>
+
+    <div class="modal" id="result-modal">
+        <div class="modal-content">
+            <h2 id="modal-title"></h2>
+            <p id="modal-message"></p>
+            <p style="font-size: 12px; color: #777;">Come back tomorrow for a new casualty!</p>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. GAME DATA ---
+        // Add as many conditions as you want here! The game loops through them based on the date.
+        const conditionsDB = [
+            {
+                name: "Asthma",
+                acceptable: ["asthma", "asthma attack", "severe asthma"],
+                hints: [
+                    "Difficulty breathing, especially breathing out.",
+                    "A distinctive wheezing sound.",
+                    "Coughing and severe distress.",
+                    "The casualty is reaching for a blue reliever inhaler."
+                ]
+            },
+            {
+                name: "Hypoglycaemia",
+                acceptable: ["hypoglycaemia", "hypoglycemia", "diabetic emergency", "low blood sugar"],
+                hints: [
+                    "Trembling, shaking, and a rapid pulse.",
+                    "Pale, cold, clammy skin.",
+                    "Confusion, which may appear as aggression or 'drunken' behaviour.",
+                    "They are wearing a medical warning bracelet and asking for sugar."
+                ]
+            },
+            {
+                name: "Heart Attack",
+                acceptable: ["heart attack", "myocardial infarction", "mi"],
+                hints: [
+                    "Pale, cold, clammy skin.",
+                    "A sudden sense of impending doom.",
+                    "Pain radiating down the left arm or up to the jaw.",
+                    "Severe, crushing chest pain."
+                ]
+            },
+            {
+                name: "Arterial Bleed",
+                acceptable: ["arterial bleed", "severe bleed", "major bleed"],
+                hints: [
+                    "Rapid, severe blood loss.",
+                    "Blood is bright red in colour.",
+                    "Blood is spurting in time with the heartbeat.",
+                    "Requires immediate, catastrophic direct pressure to save the life."
+                ]
+            },
+            {
+                name: "Stroke",
+                acceptable: ["stroke"],
+                hints: [
+                    "Sudden confusion or altered conscious level.",
+                    "Loss of power or weakness in their arms.",
+                    "Speech problems, such as slurring words.",
+                    "Facial weakness or drooping on one side (FAST test)."
+                ]
+            }
+        ];
+
+        // --- 2. DAILY PUZZLE LOGIC ---
+        // Use a fixed start date to calculate an offset. 
+        // This ensures everyone playing on the same day gets the same puzzle.
+        const startDate = new Date("2024-01-01").setHours(0,0,0,0);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        const diffTime = Math.abs(today - startDate);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Use modulo to loop back to the start of the list if we run out of days
+        const todaysPuzzle = conditionsDB[diffDays % conditionsDB.length];
+        
+        // --- 3. GAME STATE ---
+        let currentHintIndex = 0;
+        let isGameOver = false;
+
+        // --- 4. UI SETUP ---
+        document.getElementById('date-display').innerText = new Date().toLocaleDateString('en-GB', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+        });
+
+        const hintsContainer = document.getElementById('hints-container');
+        const guessInput = document.getElementById('guess-input');
+
+        // Create HTML for all hints, but keep them hidden initially
+        todaysPuzzle.hints.forEach((hint, index) => {
+            const hintDiv = document.createElement('div');
+            hintDiv.className = 'hint-box';
+            hintDiv.id = `hint-${index}`;
+            hintDiv.innerHTML = `<span class="hint-number">Clue ${index + 1} of ${todaysPuzzle.hints.length}</span>${hint}`;
+            hintsContainer.appendChild(hintDiv);
+        });
+
+        // Show the first hint
+        document.getElementById('hint-0').classList.add('visible');
+
+        // Allow pressing "Enter" to submit
+        guessInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                submitGuess();
+            }
+        });
+
+        // --- 5. GAMEPLAY LOGIC ---
+        function submitGuess() {
+            if (isGameOver) return;
+
+            const userGuess = guessInput.value.trim().toLowerCase();
+            if (userGuess === "") return; // Don't submit empty guesses
+
+            // Check if correct
+            const isCorrect = todaysPuzzle.acceptable.includes(userGuess) || todaysPuzzle.name.toLowerCase() === userGuess;
+
+            if (isCorrect) {
+                endGame(true);
+            } else {
+                // Wrong guess
+                logWrongGuess(guessInput.value.trim());
+                guessInput.value = ""; // clear input
+                
+                currentHintIndex++;
+                
+                // Show next hint if available
+                if (currentHintIndex < todaysPuzzle.hints.length) {
+                    document.getElementById(`hint-${currentHintIndex}`).classList.add('visible');
+                } else {
+                    // Out of hints!
+                    endGame(false);
+                }
+            }
+        }
+
+        function logWrongGuess(guessText) {
+            const container = document.getElementById('guesses-container');
+            const span = document.createElement('span');
+            span.className = 'guess-tag';
+            span.innerText = guessText;
+            container.appendChild(span);
+        }
+
+        function endGame(won) {
+            isGameOver = true;
+            document.getElementById('guess-input').disabled = true;
+            document.getElementById('guess-btn').disabled = true;
+
+            const modal = document.getElementById('result-modal');
+            const title = document.getElementById('modal-title');
+            const message = document.getElementById('modal-message');
+
+            if (won) {
+                title.innerText = "Diagnosis Correct!";
+                title.className = "win-text";
+                message.innerText = `Great job! The casualty was suffering from ${todaysPuzzle.name}. You got it in ${currentHintIndex + 1} clue(s).`;
+            } else {
+                title.innerText = "Out of Clues!";
+                title.className = "lose-text";
+                message.innerText = `The correct diagnosis was ${todaysPuzzle.name}. Better luck tomorrow!`;
+            }
+
+            modal.style.display = "flex";
+        }
+    </script>
+</body>
 </html>
