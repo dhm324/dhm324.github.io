@@ -6,7 +6,7 @@
     <title>Daily Diagnosis</title>
     <style>
         :root {
-            --primary: #d32f2f; /* Lifesaving Red */
+            --primary: #d32f2f;
             --bg-color: #f4f4f9;
             --card-bg: #ffffff;
             --text-dark: #333333;
@@ -70,7 +70,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             font-size: 16px;
             line-height: 1.4;
-            display: none; /* Hidden by default */
+            display: none;
             animation: fadeIn 0.3s ease-in;
         }
 
@@ -93,6 +93,7 @@
             margin-top: 10px;
         }
 
+        /* Update input to look clickable like a dropdown */
         input[type="text"] {
             flex: 1;
             padding: 12px;
@@ -101,10 +102,12 @@
             font-size: 16px;
             outline: none;
             transition: border-color 0.2s;
+            cursor: pointer;
         }
 
         input[type="text"]:focus {
             border-color: var(--primary);
+            cursor: text;
         }
 
         button {
@@ -190,7 +193,11 @@
             </div>
 
         <div class="input-section">
-            <input type="text" id="guess-input" placeholder="Enter condition (e.g. Asthma)" autocomplete="off">
+            <input type="text" id="guess-input" list="condition-options" placeholder="Search or select..." autocomplete="off">
+            
+            <datalist id="condition-options">
+                </datalist>
+
             <button id="guess-btn" onclick="submitGuess()">Guess</button>
         </div>
     </div>
@@ -205,7 +212,6 @@
 
     <script>
         // --- 1. GAME DATA ---
-        // Add as many conditions as you want here! The game loops through them based on the date.
         const conditionsDB = [
             {
                 name: "Asthma",
@@ -259,17 +265,24 @@
             }
         ];
 
+        // --- NEW: POPULATE THE DROPDOWN LIST ---
+        // This takes every condition from your DB, sorts them alphabetically, and adds them to the datalist
+        const datalist = document.getElementById('condition-options');
+        const sortedConditions = [...conditionsDB].sort((a, b) => a.name.localeCompare(b.name));
+        
+        sortedConditions.forEach(condition => {
+            const option = document.createElement('option');
+            option.value = condition.name;
+            datalist.appendChild(option);
+        });
+
         // --- 2. DAILY PUZZLE LOGIC ---
-        // Use a fixed start date to calculate an offset. 
-        // This ensures everyone playing on the same day gets the same puzzle.
         const startDate = new Date("2024-01-01").setHours(0,0,0,0);
         const today = new Date();
         today.setHours(0,0,0,0);
         
         const diffTime = Math.abs(today - startDate);
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
-        // Use modulo to loop back to the start of the list if we run out of days
         const todaysPuzzle = conditionsDB[diffDays % conditionsDB.length];
         
         // --- 3. GAME STATE ---
@@ -284,7 +297,6 @@
         const hintsContainer = document.getElementById('hints-container');
         const guessInput = document.getElementById('guess-input');
 
-        // Create HTML for all hints, but keep them hidden initially
         todaysPuzzle.hints.forEach((hint, index) => {
             const hintDiv = document.createElement('div');
             hintDiv.className = 'hint-box';
@@ -293,10 +305,8 @@
             hintsContainer.appendChild(hintDiv);
         });
 
-        // Show the first hint
         document.getElementById('hint-0').classList.add('visible');
 
-        // Allow pressing "Enter" to submit
         guessInput.addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 event.preventDefault();
@@ -309,25 +319,21 @@
             if (isGameOver) return;
 
             const userGuess = guessInput.value.trim().toLowerCase();
-            if (userGuess === "") return; // Don't submit empty guesses
+            if (userGuess === "") return;
 
-            // Check if correct
             const isCorrect = todaysPuzzle.acceptable.includes(userGuess) || todaysPuzzle.name.toLowerCase() === userGuess;
 
             if (isCorrect) {
                 endGame(true);
             } else {
-                // Wrong guess
                 logWrongGuess(guessInput.value.trim());
-                guessInput.value = ""; // clear input
+                guessInput.value = ""; 
                 
                 currentHintIndex++;
                 
-                // Show next hint if available
                 if (currentHintIndex < todaysPuzzle.hints.length) {
                     document.getElementById(`hint-${currentHintIndex}`).classList.add('visible');
                 } else {
-                    // Out of hints!
                     endGame(false);
                 }
             }
