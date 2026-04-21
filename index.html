@@ -93,7 +93,6 @@
             margin-top: 10px;
         }
 
-        /* Update input to look clickable like a dropdown */
         input[type="text"] {
             flex: 1;
             padding: 12px;
@@ -194,10 +193,8 @@
 
         <div class="input-section">
             <input type="text" id="guess-input" list="condition-options" placeholder="Search or select..." autocomplete="off">
-            
             <datalist id="condition-options">
                 </datalist>
-
             <button id="guess-btn" onclick="submitGuess()">Guess</button>
         </div>
     </div>
@@ -211,7 +208,8 @@
     </div>
 
     <script>
-        // --- 1. GAME DATA ---
+        // --- 1. DAILY PUZZLE DATABASE ---
+        // These are the actual answers that will appear day-by-day.
         const conditionsDB = [
             {
                 name: "Asthma",
@@ -252,31 +250,54 @@
                     "Blood is spurting in time with the heartbeat.",
                     "Requires immediate, catastrophic direct pressure to save the life."
                 ]
-            },
-            {
-                name: "Stroke",
-                acceptable: ["stroke"],
-                hints: [
-                    "Sudden confusion or altered conscious level.",
-                    "Loss of power or weakness in their arms.",
-                    "Speech problems, such as slurring words.",
-                    "Facial weakness or drooping on one side (FAST test)."
-                ]
             }
         ];
 
-        // --- NEW: POPULATE THE DROPDOWN LIST ---
-        // This takes every condition from your DB, sorts them alphabetically, and adds them to the datalist
+        // --- 2. THE SEPARATE DROPDOWN LIST ---
+        // This is a master list of ALL conditions the user can guess. 
+        // It includes the answers from above, PLUS red herrings to make it trickier.
+        const allPossibleConditions = [
+            "Arterial Bleed",
+            "Asthma",
+            "Full Choke",
+            "Partial Choke",
+            "Internal Bleed",
+            "Sunburn",
+            "Snake Bite",
+            "Tick",
+            "Leech",
+            "Splinter",
+            "Sting",
+            "Jellyfish Sting",
+            "Weever Fish Sting",
+            "Open Fracture",
+            "Closed Fracture",
+            "Heart Attack",
+            "Heat Exhaustion",
+            "Hyperglycaemia",
+            "Hypoglycaemia",
+            "Hypothermia",
+            "Nose Bleed",
+            "Seizure",
+            "Burn",
+            "Shock",
+            "Spinal Injury",
+            "Unconscious Breathing",
+            "Unconscious Non-Breathing",
+            "Venous Bleed"
+        ];
+
+        // Populate the dropdown list (datalist) using the separate list
         const datalist = document.getElementById('condition-options');
-        const sortedConditions = [...conditionsDB].sort((a, b) => a.name.localeCompare(b.name));
+        const sortedConditions = [...allPossibleConditions].sort((a, b) => a.localeCompare(b));
         
-        sortedConditions.forEach(condition => {
+        sortedConditions.forEach(conditionName => {
             const option = document.createElement('option');
-            option.value = condition.name;
+            option.value = conditionName;
             datalist.appendChild(option);
         });
 
-        // --- 2. DAILY PUZZLE LOGIC ---
+        // --- 3. DAILY PUZZLE LOGIC ---
         const startDate = new Date("2024-01-01").setHours(0,0,0,0);
         const today = new Date();
         today.setHours(0,0,0,0);
@@ -285,11 +306,10 @@
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         const todaysPuzzle = conditionsDB[diffDays % conditionsDB.length];
         
-        // --- 3. GAME STATE ---
+        // --- 4. GAME STATE & UI SETUP ---
         let currentHintIndex = 0;
         let isGameOver = false;
 
-        // --- 4. UI SETUP ---
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('en-GB', { 
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
         });
@@ -343,7 +363,11 @@
             const container = document.getElementById('guesses-container');
             const span = document.createElement('span');
             span.className = 'guess-tag';
-            span.innerText = guessText;
+            
+            // Format the wrong guess to Title Case for better presentation
+            const formattedGuess = guessText.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+            span.innerText = formattedGuess;
+            
             container.appendChild(span);
         }
 
