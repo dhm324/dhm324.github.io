@@ -109,6 +109,12 @@
             cursor: text;
         }
 
+        /* Error state for when they click guess on an empty box */
+        input[type="text"].error {
+            border-color: var(--primary);
+            background-color: #ffebee;
+        }
+
         button {
             padding: 12px 20px;
             background-color: var(--primary);
@@ -325,6 +331,7 @@
 
         const hintsContainer = document.getElementById('hints-container');
         const guessInput = document.getElementById('guess-input');
+        const guessBtn = document.getElementById('guess-btn');
 
         todaysPuzzle.hints.forEach((hint, index) => {
             const hintDiv = document.createElement('div');
@@ -336,12 +343,22 @@
 
         document.getElementById('hint-0').classList.add('visible');
 
+        // Remove error styling if they start typing again
+        guessInput.addEventListener('input', () => {
+            guessInput.classList.remove('error');
+        });
+
+        // Allow pressing "Enter" to submit
         guessInput.addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 event.preventDefault();
-                submitGuess();
+                // We add a tiny delay to allow the datalist to close properly
+                setTimeout(submitGuess, 50); 
             }
         });
+
+        // Bind the button click securely
+        guessBtn.addEventListener('click', submitGuess);
 
         // --- 5. GAMEPLAY LOGIC ---
         function submitGuess() {
