@@ -365,7 +365,13 @@
             if (isGameOver) return;
 
             const userGuess = guessInput.value.trim().toLowerCase();
-            if (userGuess === "") return;
+            
+            // If the box is empty, flash red so the user knows the button is working
+            if (userGuess === "") {
+                guessInput.classList.add('error');
+                guessInput.focus();
+                return;
+            }
 
             const isCorrect = todaysPuzzle.acceptable.includes(userGuess) || todaysPuzzle.name.toLowerCase() === userGuess;
 
@@ -374,6 +380,7 @@
             } else {
                 logWrongGuess(guessInput.value.trim());
                 guessInput.value = ""; 
+                guessInput.focus(); // Snap cursor back to the box
                 
                 currentHintIndex++;
                 
@@ -390,17 +397,20 @@
             const span = document.createElement('span');
             span.className = 'guess-tag';
             
-            // Format the wrong guess to Title Case for better presentation
-            const formattedGuess = guessText.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-            span.innerText = formattedGuess;
+            // Safely format the wrong guess to Title Case
+            const formattedGuess = guessText.split(' ')
+                .filter(word => word.length > 0)
+                .map(word => word[0].toUpperCase() + word.slice(1))
+                .join(' ');
             
+            span.innerText = formattedGuess;
             container.appendChild(span);
         }
 
         function endGame(won) {
             isGameOver = true;
-            document.getElementById('guess-input').disabled = true;
-            document.getElementById('guess-btn').disabled = true;
+            guessInput.disabled = true;
+            guessBtn.disabled = true;
 
             const modal = document.getElementById('result-modal');
             const title = document.getElementById('modal-title');
